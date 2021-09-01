@@ -5,7 +5,7 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Source COde Pro:pixelsize=24:antialias=true:autohint=true";
+static char *font = "SauceCodePro Nerd Font Mono:pixelsize=18:antialias=true:autohint=true";
 static int borderpx = 4;
 
 /*
@@ -210,11 +210,11 @@ static Shortcut shortcuts[] = {
 	{ Mod1Mask,               XK_Num_Lock,    numlock,        {.i =  0} },
 	{ Mod1Mask,               XK_u,           copyurl,        {.i =  0} },
 	{ Mod1Mask,               Button4,        kscrollup,      {.i =  1} },
-	{ Mod1Mask,               XK_i,           kscrollup,      {.i =  1} },
-	{ Mod1Mask,               XK_k,           kscrolldown,    {.i =  1} },
+	{ Mod1Mask,               XK_k,           kscrollup,      {.i =  1} },
+	{ Mod1Mask,               XK_j,           kscrolldown,    {.i =  1} },
 	{ Mod1Mask,               Button5,        kscrolldown,    {.i =  1} },
-	{ Mod1Mask|ControlMask,   XK_i,           kscrollup,      {.i = -1} },
-	{ Mod1Mask|ControlMask,   XK_k,           kscrolldown,    {.i = -1} },
+	{ Mod1Mask|ControlMask,   XK_k,           kscrollup,      {.i = -1} },
+	{ Mod1Mask|ControlMask,   XK_j,           kscrolldown,    {.i = -1} },
 	{ Mod1Mask|ControlMask,		XK_p,           externalpipe,   {.v = openurlcmd } },
 	{ Mod1Mask,               XK_y,           externalpipe,   {.v = copyurlcmd } },
 	{ Mod1Mask,               XK_o,           externalpipe,   {.v = copyoutput } },
