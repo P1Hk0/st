@@ -83,7 +83,7 @@ char *termname = "st-256color";
 unsigned int tabspaces = 8;
 
 /* bg opacity */
-float alpha = 0.8;
+float alpha = 0.5;
 
 
 /* Terminal colors (16 first used in escape sequence) */
@@ -209,12 +209,19 @@ static Shortcut shortcuts[] = {
 	{ ShiftMask,              XK_Insert,      selpaste,       {.i =  0} },
 	{ Mod1Mask,               XK_Num_Lock,    numlock,        {.i =  0} },
 	{ Mod1Mask,               XK_u,           copyurl,        {.i =  0} },
+<<<<<<< Updated upstream
 	{ Mod1Mask,               Button4,        kscrollup,      {.i =  1} },
 	{ Mod1Mask,               XK_equal,           kscrollup,      {.i =  1} },
 	{ Mod1Mask,               XK_minus,           kscrolldown,    {.i =  1} },
 	{ Mod1Mask,               Button5,        kscrolldown,    {.i =  1} },
 	{ Mod1Mask|ControlMask,   XK_k,           kscrollup,      {.i = -1} },
 	{ Mod1Mask|ControlMask,   XK_j,           kscrolldown,    {.i = -1} },
+=======
+	{ ShiftMask,               Button4,        kscrollup,      {.i =  1} },
+	/* { ShiftMask,               Button5,        kscrolldown,    {.i =  1} }, */
+	/* { ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} }, */
+	{ ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
+>>>>>>> Stashed changes
 	{ Mod1Mask|ControlMask,		XK_p,           externalpipe,   {.v = openurlcmd } },
 	{ Mod1Mask,               XK_y,           externalpipe,   {.v = copyurlcmd } },
 	{ Mod1Mask,               XK_o,           externalpipe,   {.v = copyoutput } },
