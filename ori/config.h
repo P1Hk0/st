@@ -6,20 +6,18 @@
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
 static char *font = "SauceCodePro Nerd Font Mono:pixelsize=18:antialias=true:autohint=true";
-static int borderpx = 2;
+static int borderpx = 4;
 
 /*
  * What program is execed by st depends of these precedence rules:
  * 1: program passed with -e
- * 2: scroll and/or utmp
+ * 2: utmp option
  * 3: SHELL environment variable
  * 4: value of shell in /etc/passwd
  * 5: value of shell in config.h
  */
 static char *shell = "/bin/sh";
 char *utmp = NULL;
-/* scroll program: to enable use a string like "scroll" */
-char *scroll = NULL;
 char *stty_args = "stty raw pass8 nl -echo -iexten -cstopb 38400";
 
 /* identification sequence returned in DA and DECID */
@@ -43,24 +41,15 @@ static unsigned int tripleclicktimeout = 600;
 /* alt screens */
 int allowaltscreen = 1;
 
-/* allow certain non-interactive (insecure) window operations such as:
-   setting the clipboard text */
-int allowwindowops = 0;
-
-/*
- * draw latency range in ms - from new content/keypress/etc until drawing.
- * within this range, st draws when content stops arriving (idle). mostly it's
- * near minlatency, but it waits longer for slow updates to avoid partial draw.
- * low minlatency will tear/flicker more, as it can "detect" idle too early.
- */
-static double minlatency = 8;
-static double maxlatency = 33;
+/* frames per second st should at maximum draw to the screen */
+static unsigned int xfps = 120;
+static unsigned int actionfps = 30;
 
 /*
  * blinking timeout (set to 0 to disable blinking) for the terminal blinking
  * attribute.
  */
-static unsigned int blinktimeout = 800;
+static unsigned int blinktimeout = 500;
 
 /*
  * thickness of underline and bar cursors
@@ -94,10 +83,12 @@ char *termname = "st-256color";
 unsigned int tabspaces = 8;
 
 /* bg opacity */
-float alpha = 0.8;
+float alpha = 0.5;
+
 
 /* Terminal colors (16 first used in escape sequence) */
 static const char *colorname[] = {
+
   /* 8 normal colors */
   [0] = "#000000", /* black   */
   [1] = "#ff5555", /* red     */
@@ -123,10 +114,9 @@ static const char *colorname[] = {
   [257] = "#f8f8f2", /* foreground */
 };
 
-
 /*
  * Default colors (colorname index)
- * foreground, background, cursor, 
+ * foreground, background, cursor
  */
 unsigned int defaultfg = 257;
 unsigned int defaultbg = 256;
@@ -134,8 +124,17 @@ static unsigned int defaultcs = 257;
 static unsigned int defaultrcs = 257;
 
 /*
+ * Colors used, when the specific fg == defaultfg. So in reverse mode this
+ * will reverse too. Another logic would only make the simple feature too
+ * complex.
+ */
+unsigned int defaultitalic = 7;
+unsigned int defaultunderline = 7;
+/*
  * Default shape of cursor
+ * 1: Blinking Block ("█")
  * 2: Block ("█")
+ * 3: Blinking Underline ("_")
  * 4: Underline ("_")
  * 6: Bar ("|")
  * 7: Snowman ("☃")
@@ -161,8 +160,6 @@ static unsigned int mousebg = 0;
  * doesn't match the ones requested.
  */
 static unsigned int defaultattr = 11;
-unsigned int defaultitalic = 7;
-unsigned int defaultunderline = 7;
 
 /*
  * Force mouse select/shortcuts while mask is active (when MODE_MOUSE is set).
@@ -178,9 +175,7 @@ static uint forcemousemod = ShiftMask;
 static MouseShortcut mshortcuts[] = {
 	/* mask                 button   function        argument       release */
 	{ XK_ANY_MOD,           Button2, selpaste,       {.i = 0},      1 },
-	{ ShiftMask,            Button4, ttysend,        {.s = "\033[5;2~"} },
 	{ XK_ANY_MOD,           Button4, ttysend,        {.s = "\031"} },
-	{ ShiftMask,            Button5, ttysend,        {.s = "\033[6;2~"} },
 	{ XK_ANY_MOD,           Button5, ttysend,        {.s = "\005"} },
 };
 
@@ -188,24 +183,49 @@ static MouseShortcut mshortcuts[] = {
 #define MODKEY Mod1Mask
 #define TERMMOD (ControlMask|ShiftMask)
 
+ // from @LukeSmithxyz
+static char *openurlcmd[] = { "/bin/sh", "-c",
+    "sed 's/.*│//g' | tr -d '\n' | grep -aEo '(((http|https)://|www\\.)[a-zA-Z0-9.]*[:]?[a-zA-Z0-9./&%?#=_-]*)|((magnet:\\?xt=urn:btih:)[a-zA-Z0-9]*)'| uniq | sed 's/^www./http:\\/\\/www\\./g' | dmenu -i -p 'Follow which url?' -l 10 | xargs -r xdg-open",
+    "externalpipe", NULL };
+static char *copyurlcmd[] = { "/bin/sh", "-c",
+    "sed 's/.*│//g' | tr -d '\n' | grep -aEo '(((http|https)://|www\\.)[a-zA-Z0-9.]*[:]?[a-zA-Z0-9./&%?#=_-]*)|((magnet:\\?xt=urn:btih:)[a-zA-Z0-9]*)' | uniq | sed 's/^www./http:\\/\\/www\\./g' | dmenu -i -p 'Copy which url?' -l 10 | tr -d '\n' | xclip -selection clipboard",
+    "externalpipe", NULL };
+static char *copyoutput[] = { "/bin/sh", "-c", "st-copyout", "externalpipe", NULL };
+
 static Shortcut shortcuts[] = {
-	/* mask                 keysym          function        argument */
-	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
-	{ ControlMask,          XK_Print,       toggleprinter,  {.i =  0} },
-	{ ShiftMask,            XK_Print,       printscreen,    {.i =  0} },
-	{ XK_ANY_MOD,           XK_Print,       printsel,       {.i =  0} },
-	{ MODKEY,              XK_equal,       zoom,           {.f = +1} },
-	{ MODKEY,              XK_minus,        zoom,           {.f = -1} },
-	{ TERMMOD,              XK_Home,        zoomreset,      {.f =  0} },
-	{ TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
-	{ TERMMOD,              XK_V,           clippaste,      {.i =  0} },
-	{ TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
-	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
-	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
-	{ MODKEY,               XK_Page_Up,           kscrollup,      {.i =  1} },
-	{ MODKEY,               XK_Page_Down,           kscrolldown,    {.i =  1} },
-	{ MODKEY|ShiftMask,               XK_Page_Up,           kscrollup,      {.i =  -1} },
-	{ MODKEY|ShiftMask,               XK_Page_Down,           kscrolldown,    {.i =  -1} },
+	/* mask                   keysym          function        argument */
+	{ XK_ANY_MOD,             XK_Break,       sendbreak,      {.i =  0} },
+	{ ControlMask,            XK_Print,       toggleprinter,  {.i =  0} },
+	{ ShiftMask,              XK_Print,       printscreen,    {.i =  0} },
+	{ XK_ANY_MOD,             XK_Print,       printsel,       {.i =  0} },
+	{ TERMMOD|ControlMask,                XK_Up,          zoom,           {.f = +1} },
+	{ TERMMOD|ControlMask,                XK_Down,        zoom,           {.f = -1} },
+	{ TERMMOD,                Button4,        zoom,           {.f = +1} },
+	{ TERMMOD,                Button5,        zoom,           {.f = -1} },
+	{ TERMMOD,                XK_Home,        zoomreset,      {.f =  0} },
+	{ TERMMOD,                XK_C,           clipcopy,       {.i =  0} },
+	{ TERMMOD,                XK_V,           clippaste,      {.i =  0} },
+	{ TERMMOD,                XK_Y,           selpaste,       {.i =  0} },
+	{ ShiftMask,              XK_Insert,      selpaste,       {.i =  0} },
+	{ Mod1Mask,               XK_Num_Lock,    numlock,        {.i =  0} },
+	{ Mod1Mask,               XK_u,           copyurl,        {.i =  0} },
+<<<<<<< Updated upstream
+	{ Mod1Mask,               Button4,        kscrollup,      {.i =  1} },
+	{ Mod1Mask,               XK_equal,           kscrollup,      {.i =  1} },
+	{ Mod1Mask,               XK_minus,           kscrolldown,    {.i =  1} },
+	{ Mod1Mask,               Button5,        kscrolldown,    {.i =  1} },
+	{ Mod1Mask|ControlMask,   XK_k,           kscrollup,      {.i = -1} },
+	{ Mod1Mask|ControlMask,   XK_j,           kscrolldown,    {.i = -1} },
+=======
+	{ ShiftMask,               Button4,        kscrollup,      {.i =  1} },
+	/* { ShiftMask,               Button5,        kscrolldown,    {.i =  1} }, */
+	/* { ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} }, */
+	{ ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
+>>>>>>> Stashed changes
+	{ Mod1Mask|ControlMask,		XK_p,           externalpipe,   {.v = openurlcmd } },
+	{ Mod1Mask,               XK_y,           externalpipe,   {.v = copyurlcmd } },
+	{ Mod1Mask,               XK_o,           externalpipe,   {.v = copyoutput } },
+
 };
 
 /*
